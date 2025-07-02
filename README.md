@@ -125,7 +125,7 @@ This may seem daunting, but essentially the DAG follows these steps:
 This workflow has the following directory structure:
 
 * Note: this follows the Snakemake reproducibility guidelines.
-* Another note: the results directory may not be used and/or created depending on how your `config.yaml` is configured. More on this in the Usage section.
+* Another note: the results directory may not be used and/or created depending on how your `config.yaml` (or the config you specify; more details in the advance usage section) is configured. More on this in the Usage section.
 * Another *another* note: the `resources` directory may not be used. it depends if you map your own reference FASTA file via a command line argument when executing Snakemake. This is described in the advance usage section.
 
 ```sh
@@ -257,7 +257,7 @@ Additionally, you'll need to download the GATK jar and set the absolute filepath
    source "$HOME/.sdkman/bin/sdkman-init.sh"
    ```
 
-5. Set `java` to `java 23.0.1` using `SDKMAN!` via
+5. Set `java` to `java 23.0.1` using `SDKMAN!` (this also must be done everytime you open the container) via
 
    ```sh
    sdk use java 23.0.1-amzn
@@ -277,10 +277,6 @@ Additionally, you'll need to download the GATK jar and set the absolute filepath
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-*For more examples, please refer to the [Documentation](https://example.com)*
 
 ### Quickstart (I suggest beginning here!)
 
@@ -419,7 +415,7 @@ Project Link: [https://github.com/alemanac/GATK_mutect2_shifted_module_ANL](http
 
 * [Allan Dickerman](https://github.com/AllanDickerman), for his guidance.
 * Rebecca Wattam, also, for her guidance.
-* [GATK-For-Microbes by the Broad Institute](https://github.com/broadinstitute/GATK-for-Microbes).
+* [GATK-For-Microbes, by the Broad Institute](https://github.com/broadinstitute/GATK-for-Microbes).
 * The open source community – for helping with my debugging!
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

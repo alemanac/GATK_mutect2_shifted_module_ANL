@@ -16,8 +16,6 @@ rule gen_ref_bwa_indexes:
     log: 
         stderr = f"{main_dir}/{ref_base}/ref_processing/logs/{ref_base}_gen_ref_bwa_indexes_stderr",
         stdout = f"{main_dir}/{ref_base}/ref_processing/logs/{ref_base}_gen_ref_bwa_indexes_stdout"
-    container:
-        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
     shell:
         """
         
@@ -25,7 +23,7 @@ rule gen_ref_bwa_indexes:
         RULEDIR="$(dirname -- "$(realpath -- "{output.ref_amb}")")"; \
         cd "$RULEDIR"; \
         
-        /usr/gitc/bwa index {params.ref_fna} 2> "$CWD"/{log.stderr} > "$CWD"/{log.stdout}
+        bwa index {params.ref_fna} 2> "$CWD"/{log.stderr} > "$CWD"/{log.stdout}
         """
 
 rule gen_ref_faidx:
@@ -35,8 +33,7 @@ rule gen_ref_faidx:
         fai = f"{main_dir}/{ref_base}/ref_processing/{ref_base}{ref_ext}.fai"
     log:
         stderr = f"{main_dir}/{ref_base}/ref_processing/logs/{ref_base}_gen_ref_faidx_stderr",
-        stdout = f"{main_dir}/{ref_base}/ref_processing/logs/{ref_base}_gen_ref_faidx_stdout",
-    container: "file:///vol/patric3/production/containers/ubuntu-045-12.sif"
+        stdout = f"{main_dir}/{ref_base}/ref_processing/logs/{ref_base}_gen_ref_faidx_stdout"
     shell:
         """
         samtools faidx {input.ref} \
@@ -51,11 +48,11 @@ rule gen_ref_dict:
     log: 
         stderr = f"{main_dir}/{ref_base}/ref_processing/logs/{ref_base}_gen_ref_dict_stderr",
         stdout = f"{main_dir}/{ref_base}/ref_processing/logs/{ref_base}_gen_ref_dict_stdout"
-    container:
-        "docker://broadinstitute/gatk"
     shell:
         """
-        gatk CreateSequenceDictionary \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
+        CreateSequenceDictionary \
         -R {config[ref_fna]} \
         -O {output.ref_dict} 2> {log.stderr} > {log.stdout}
         """    

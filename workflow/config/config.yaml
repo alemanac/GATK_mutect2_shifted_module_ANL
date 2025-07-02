@@ -1,17 +1,34 @@
-#use_only_local_container: False
+#Arguments passed to java when GATK is ran.
+java_args: "-Xms4000m -Xmx8000m"
 
-run_name: "run_1"
-
-java_options: "Xms3000m"
-
+#Reference fasta file used for variant calling. 
+# Specify the relative *or* absolute filepath.
 ref_fna: "resources/BW25113.fna"
 
+#Metadata added to bam files.
 read_group_library: "NA"
 read_group_platform: "NA"
 read_group_platform_unit: "NA"
+read_group_run_date: "NA"
+read_group_sequencing_center: "NA"
 
+#Samples to be used.
+samples:
+- "SRR3722077"
+- "SRR3722078"
+- "SRR3722089"
+- "SRR3722114"
+
+#Output directory. This directory can be absolute or relative 
+# to the root of the Snakemake workflow directory.
+output_dir: "results"
+
+#Mutect2-based parameters. #Ex. "0.75"
+allele_fraction: "0.75" #Minimum allele fraction needed for variant to be called.
+
+#Samples below were used for testing and analysis-related purposes.
 test_sample:
-- "SRR3722204" 
+- "SRR3722204"
 
 local_tree_2:
 - "SRR3722077"

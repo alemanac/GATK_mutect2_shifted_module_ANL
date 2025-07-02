@@ -1,75 +1,6 @@
 reference_fasta = Path(config['ref_fna']).name
 ref_base = Path(reference_fasta).with_suffix('')
 
-#TODO: trim with cutadapt as specified in the paper
-
-rule gen_mq_filtered_reads:
-    input:
-        reads = "{main_dir}/{SRR}/gen_duplicates_marked_reads/reads.bam"
-    output:
-        mq_filtered_reads = "{main_dir}/{SRR}/gen_mq_filtered_reads/reads.bam",
-        reads_index = "{main_dir}/{SRR}/gen_mq_filtered_reads/reads.bam.bai"
-    params:
-        minimum_mq = "10"
-    log:
-        stderr = "{main_dir}/{SRR}/gen_mq_filtered_reads/stderr",
-        stdout = "{main_dir}/{SRR}/gen_mq_filtered_reads/stdout"
-    container:
-        "docker://broadinstitute/gatk"
-    shell:
-        """
-        samtools view \
-        --min-MQ 10 \
-        --bam \
-        --output {output.mq_filtered_reads} \
-        {input.reads} 2> {log.stderr} > {log.stdout}; \
-
-        samtools index {output.mq_filtered_reads} 2>> {log.stderr} > {log.stdout}
-        """
-
-#TODO: consider playing with the optical_duplicate_pixel_distance
-rule gen_duplicates_marked_reads:
-    input:
-        reads = "{main_dir}/{SRR}/gen_read_group_added_reads/reads.bam"
-    output:
-        duplicates_marked_reads = "{main_dir}/{SRR}/gen_duplicates_marked_reads/reads.bam",
-        metric_file = "{main_dir}/{SRR}/gen_duplicates_marked_reads/metrics.txt"
-    log: 
-        stderr = "{main_dir}/{SRR}/gen_duplicates_marked_reads/stderr",
-        stdout = "{main_dir}/{SRR}/gen_duplicates_marked_reads/stdout"
-    container:
-        "docker://broadinstitute/gatk"
-    shell:
-        """
-        gatk --java-options "-Xms3000m" MarkDuplicates \
-        INPUT={input.reads} \
-        OUTPUT={output.duplicates_marked_reads} \
-        METRICS_FILE={output.metric_file} \
-        CLEAR_DT="false" 2> {log.stderr} > {log.stdout}
-        """
-
-#TODO: the A in @RG may be wrong
-rule gen_read_group_added_reads:
-    input:
-        reads = "{main_dir}/{SRR}/gen_sorted_reads/reads.bam"
-    output:
-        read_group_added_reads = "{main_dir}/{SRR}/gen_read_group_added_reads/reads.bam"
-    log:
-        stderr = "{main_dir}/{SRR}/gen_read_group_added_reads/stderr",
-        stdout = "{main_dir}/{SRR}/gen_read_group_added_reads/stdout"
-    container: "docker://broadinstitute/gatk"
-    shell:
-        """
-        gatk --java-options "-Xms3000m" AddOrReplaceReadGroups \
-        --INPUT {input.reads} \
-        --OUTPUT {output.read_group_added_reads} \
-        --RGLB {config[read_group_library]} \
-        --RGPL {config[read_group_platform]} \
-        --RGPU {config[read_group_platform_unit]} \
-        --RGSM {wildcards.SRR} 2> {log.stderr} > {log.stdout}
-        """
-
-
 #TODO: it shouldn't matter, but consider running this before mark duplicates in the pipeline
 #TODO: test indexing with samtools, although it shouldn't matter
 """
@@ -77,17 +8,117 @@ I'm unsure what this is sorting, but I think it's the indexes for the reads
 """
 rule gen_sorted_reads:
     input:
-        reads = "{main_dir}/{SRR}/gen_aligned_reads/{SRR}.bam"
+        reads = "{main_dir}/{SRR}/gen_duplicates_marked_reads/reads.bam",
     output:
         sorted_reads = "{main_dir}/{SRR}/gen_sorted_reads/reads.bam"
     log: 
         stderr = "{main_dir}/{SRR}/gen_sorted_reads/stderr",
         stdout = "{main_dir}/{SRR}/gen_sorted_reads/stdout"
-    container: "docker://broadinstitute/gatk"
+    container: "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
     shell:
         """
-        samtools sort {input.reads} \
-        -o {output.sorted_reads} 2> {log.stderr} > {log.stdout}
+        java {config[java_args]} -jar /usr/gitc/picard.jar \
+        SortSam \
+        INPUT={input.reads} \
+        OUTPUT={output.sorted_reads} \
+        SORT_ORDER="coordinate" \
+        CREATE_INDEX=true \
+        MAX_RECORDS_IN_RAM=300000 2> {log.stderr} > {log.stdout}
+        """
+
+#TODO: consider playing with the optical_duplicate_pixel_distance
+rule gen_duplicates_marked_reads:
+    input:
+        reads = "{main_dir}/{SRR}/gen_merged_aligned_reads/reads.bam"
+    output:
+        duplicates_marked_reads = "{main_dir}/{SRR}/gen_duplicates_marked_reads/reads.bam",
+        metric_file = "{main_dir}/{SRR}/gen_duplicates_marked_reads/metrics.txt"
+    log: 
+        stderr = "{main_dir}/{SRR}/gen_duplicates_marked_reads/stderr",
+        stdout = "{main_dir}/{SRR}/gen_duplicates_marked_reads/stdout"
+    container:
+        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
+    shell:
+        """
+        java {config[java_args]} -jar /usr/gitc/picard.jar \
+        MarkDuplicates \
+        INPUT={input.reads} \
+        OUTPUT={output.duplicates_marked_reads} \
+        METRICS_FILE={output.metric_file} \
+        VALIDATION_STRINGENCY=SILENT \
+        OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 \
+        ASSUME_SORT_ORDER="queryname" \
+        CLEAR_DT="false" \
+        ADD_PG_TAG_TO_READS=false 2> {log.stderr} > {log.stdout}
+        """
+
+rule gen_merged_aligned_reads: 
+    input:
+        aligned_reads = "{main_dir}/{SRR}/gen_aligned_reads/reads.bam",
+        unmapped_reads = "{main_dir}/{SRR}/gen_unmapped_bam/reads.unmapped.bam",
+        ref_fa = f"{main_dir}/{ref_base}/ref_processing/{reference_fasta}",
+        ref_dict = f"{main_dir}/{ref_base}/ref_processing/{ref_base}.dict"
+    output:
+        m_b = "{main_dir}/{SRR}/gen_merged_aligned_reads/reads.bam"
+    params:
+        bwa_command = "bwa mem -K 100000000 -v 3 -t 2 -Y BW25113_reference_fasta {SRR}_1.fastq {SRR}_2.fastq -o {main_dir}/{SRR}.bam"
+    log: 
+        stdout = "{main_dir}/{SRR}/gen_merged_aligned_reads/stdout",
+        stderr = "{main_dir}/{SRR}/gen_merged_aligned_reads/stderr"
+    container:
+        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
+    shell:
+        """
+        java {config[java_args]} -jar /usr/gitc/picard.jar \
+        MergeBamAlignment \
+        VALIDATION_STRINGENCY=SILENT \
+        EXPECTED_ORIENTATIONS=FR \
+        ATTRIBUTES_TO_RETAIN=X0 \
+        ATTRIBUTES_TO_REMOVE=NM \
+        ATTRIBUTES_TO_REMOVE=MD \
+        ALIGNED_BAM={input.aligned_reads} \
+        UNMAPPED_BAM={input.unmapped_reads} \
+        OUTPUT={output.m_b} \
+        REFERENCE_SEQUENCE={input.ref_fa} \
+        PAIRED_RUN=true \
+        SORT_ORDER="unsorted" \
+        IS_BISULFITE_SEQUENCE=false \
+        ALIGNED_READS_ONLY=false \
+        CLIP_ADAPTERS=false \
+        MAX_RECORDS_IN_RAM=2000000 \
+        ADD_MATE_CIGAR=true \
+        MAX_INSERTIONS_OR_DELETIONS=-1 \
+        PRIMARY_ALIGNMENT_STRATEGY=MostDistant \
+        UNMAPPED_READ_STRATEGY=COPY_TO_TAG \
+        ALIGNER_PROPER_PAIR_FLAGS=true \
+        UNMAP_CONTAMINANT_READS=true \
+        ADD_PG_TAG_TO_READS=false 2> {log.stderr} > {log.stdout}
+        """ 
+
+rule gen_unmapped_bam:
+    input:
+        fq_1 = "{main_dir}/{SRR}/fetch_reads/{SRR}_1.fastq",
+        fq_2 = "{main_dir}/{SRR}/fetch_reads/{SRR}_2.fastq" 
+    output:
+        unmapped_reads = "{main_dir}/{SRR}/gen_unmapped_bam/reads.unmapped.bam"
+    log: 
+        stderr = "{main_dir}/{SRR}/gen_unmapped_bam/stderr",
+        stdout = "{main_dir}/{SRR}/gen_unmapped_bam/stdout"
+    container:
+        "docker://broadinstitute/gatk"
+    shell: 
+        """
+        gatk --java-options "{config[java_args]}" \
+        FastqToSam \
+        --FASTQ {input.fq_1} \
+        --FASTQ2 {input.fq_2} \
+        --OUTPUT {output.unmapped_reads} \
+        --SAMPLE_NAME {wildcards.SRR} \
+        --LIBRARY_NAME {config[read_group_library]} \
+        --PLATFORM_UNIT {config[read_group_platform_unit]} \
+        --RUN_DATE 0000-00-00 \
+        --PLATFORM {config[read_group_platform]} \
+        --SEQUENCING_CENTER {config[read_group_sequencing_center]} 2> {log.stderr} > {log.stdout}
         """
 
 #TODO: removed the -k flag. perform the same test but with the k flag
@@ -97,34 +128,36 @@ rule gen_aligned_reads:
         fq_1 = "{main_dir}/{SRR}/fetch_reads/{SRR}_1.fastq",
         fq_2 = "{main_dir}/{SRR}/fetch_reads/{SRR}_2.fastq",
         ref = f"{main_dir}/{ref_base}/ref_processing/{reference_fasta}",
-        ref_amb = f"{main_dir}/{ref_base}/ref_processing/{ref_base}.fna.amb",
-        ref_bwt = f"{main_dir}/{ref_base}/ref_processing/{ref_base}.fna.bwt",
-        ref_ann = f"{main_dir}/{ref_base}/ref_processing/{ref_base}.fna.ann",
-        ref_pac = f"{main_dir}/{ref_base}/ref_processing/{ref_base}.fna.pac",
-        ref_sa = f"{main_dir}/{ref_base}/ref_processing/{ref_base}.fna.sa",
+        ref_amb = f"{main_dir}/{ref_base}/ref_processing/{ref_base}{ref_ext}.amb",
+        ref_bwt = f"{main_dir}/{ref_base}/ref_processing/{ref_base}{ref_ext}.bwt",
+        ref_ann = f"{main_dir}/{ref_base}/ref_processing/{ref_base}{ref_ext}.ann",
+        ref_pac = f"{main_dir}/{ref_base}/ref_processing/{ref_base}{ref_ext}.pac",
+        ref_sa = f"{main_dir}/{ref_base}/ref_processing/{ref_base}{ref_ext}.sa",
     output:
-        aligned_reads = "{main_dir}/{SRR}/gen_aligned_reads/{SRR}.bam"
+        aligned_reads = "{main_dir}/{SRR}/gen_aligned_reads/reads.bam"
     params:
         ref_processing_dir = f"{main_dir}/{ref_base}/ref_processing"
     log: 
-        stderr = "{main_dir}/{SRR}/gen_aligned_reads/stderr",
-        stdout = "{main_dir}/{SRR}/gen_aligned_reads/stdout"
+        stderr = "{main_dir}/{SRR}/gen_aligned_reads/stderr"
     container: 
-        "file:///vol/patric3/production/containers/ubuntu-045-12.sif" #TODO: replace this an online-hosted image
+        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
     shell:
         """
-        cd {params.ref_processing_dir}; \
+        WORKDIR=$(pwd); \
+        RULEDIR="$(dirname -- "$(realpath -- "{output.aligned_reads}")")"; \
+        
+        cd "$RULEDIR"; \
 
-        bwa mem \
+        /usr/gitc/bwa mem \
+        -K 100000000 \
         -v 3 \
         -t 2 \
-        ../../../../{input.ref} ../../../../{input.fq_1} ../../../../{input.fq_2} \
-        -o ../../../../{output.aligned_reads} 2> ../../../../{log.stderr} > ../../../../{log.stdout}
+        -Y \
+        "$WORKDIR"/{input.ref} "$WORKDIR"/{input.fq_1} "$WORKDIR"/{input.fq_2} \
+        2> "$WORKDIR"/{log.stderr} \
+        > reads.bam
         """
 
-
-
-#TODO: turn this into a wrapper :3
 rule fetch_reads:
     output:
         fq_1 = "{main_dir}/{SRR}/fetch_reads/{SRR}_1.fastq",
@@ -132,13 +165,11 @@ rule fetch_reads:
     log: 
         stderr = "{main_dir}/{SRR}/fetch_reads/{SRR}_fetch_reads_stderr",
         stdout = "{main_dir}/{SRR}/fetch_reads/{SRR}_fetch_reads_stdout"
-    params:
-        rule_dir = "{main_dir}/{SRR}/fetch_reads"
     container: "/vol/patric3/production/containers/ubuntu-045-12.sif" #TODO: consider changing to public image
     shell:
         """
-        fasterq-dump {wildcards.SRR} \
-        -O {params.rule_dir} 2> {wildcards.SRR}_log_stderr > {wildcards.SRR}_log_stdout; \
+        RULEDIR="$(dirname -- "$(realpath -- "{output.fq_1}")")"; \
 
-        mv {wildcards.SRR}_log_stderr {log.stderr}; mv {wildcards.SRR}_log_stdout {log.stdout}
+        fasterq-dump {wildcards.SRR} \
+        -O "$RULEDIR"
         """

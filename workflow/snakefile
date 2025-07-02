@@ -6,27 +6,19 @@ configfile: config_path
 
 reference_fasta = Path(config['ref_fna']).name
 ref_base = Path(reference_fasta).with_suffix('')
-main_dir = f"results/{config['run_name']}"
+ref_ext = Path(reference_fasta).suffix
+
+main_dir = config["output_dir"]
 
 wildcard_constraints:
     SRR = r"[R-S0-9]{10}"
 
+include: "rules/ref_processing.smk"
+include: "rules/ref_processing_shifted.smk"
 include: "rules/alignment.smk"
 include: "rules/alignment_shifted.smk"
-include: "rules/ref_processing.smk"
 include: "rules/mutect2.smk"
 
 rule all:
     input:
-        expand("{main_dir}/{SRR}/remove_duplicate_rows/variants.vcf", main_dir=main_dir, SRR=config['test_sample']),
-        expand("{main_dir}/copied_config.yaml", main_dir=main_dir)
-
-rule copy_config:
-    output:
-        copied_config = "{main_dir}/copied_config.yaml"
-    params:
-        config_path = config_path
-    shell:
-        """
-        cp {params.config_path} {output.copied_config}
-        """
+        expand("{main_dir}/{SRR}/remove_duplicate_rows/variants.vcf", main_dir=main_dir, SRR=config['samples'])

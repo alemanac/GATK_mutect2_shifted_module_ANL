@@ -1,8 +1,6 @@
 reference_fasta = Path(config['ref_fna']).name
 ref_base = Path(reference_fasta).with_suffix('')
 
-#TODO: it shouldn't matter, but consider running this before mark duplicates in the pipeline
-#TODO: test indexing with samtools, although it shouldn't matter
 """
 I'm unsure what this is sorting, but I think it's the indexes for the reads
 """
@@ -14,10 +12,10 @@ rule gen_sorted_reads:
     log: 
         stderr = "{main_dir}/{SRR}/gen_sorted_reads/stderr",
         stdout = "{main_dir}/{SRR}/gen_sorted_reads/stdout"
-    container: "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
     shell:
         """
-        java {config[java_args]} -jar /usr/gitc/picard.jar \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         SortSam \
         INPUT={input.reads} \
         OUTPUT={output.sorted_reads} \
@@ -36,11 +34,10 @@ rule gen_duplicates_marked_reads:
     log: 
         stderr = "{main_dir}/{SRR}/gen_duplicates_marked_reads/stderr",
         stdout = "{main_dir}/{SRR}/gen_duplicates_marked_reads/stdout"
-    container:
-        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
     shell:
         """
-        java {config[java_args]} -jar /usr/gitc/picard.jar \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         MarkDuplicates \
         INPUT={input.reads} \
         OUTPUT={output.duplicates_marked_reads} \
@@ -65,11 +62,10 @@ rule gen_merged_aligned_reads:
     log: 
         stdout = "{main_dir}/{SRR}/gen_merged_aligned_reads/stdout",
         stderr = "{main_dir}/{SRR}/gen_merged_aligned_reads/stderr"
-    container:
-        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
     shell:
         """
-        java {config[java_args]} -jar /usr/gitc/picard.jar \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         MergeBamAlignment \
         VALIDATION_STRINGENCY=SILENT \
         EXPECTED_ORIENTATIONS=FR \
@@ -104,11 +100,10 @@ rule gen_unmapped_bam:
     log: 
         stderr = "{main_dir}/{SRR}/gen_unmapped_bam/stderr",
         stdout = "{main_dir}/{SRR}/gen_unmapped_bam/stdout"
-    container:
-        "docker://broadinstitute/gatk"
     shell: 
         """
-        gatk --java-options "{config[java_args]}" \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         FastqToSam \
         --FASTQ {input.fq_1} \
         --FASTQ2 {input.fq_2} \
@@ -121,8 +116,6 @@ rule gen_unmapped_bam:
         --SEQUENCING_CENTER {config[read_group_sequencing_center]} 2> {log.stderr} > {log.stdout}
         """
 
-#TODO: removed the -k flag. perform the same test but with the k flag
-#TODO": removed the -y flag. perform a test with it
 rule gen_aligned_reads:
     input:
         fq_1 = "{main_dir}/{SRR}/fetch_reads/{SRR}_1.fastq",
@@ -139,8 +132,6 @@ rule gen_aligned_reads:
         ref_processing_dir = f"{main_dir}/{ref_base}/ref_processing"
     log: 
         stderr = "{main_dir}/{SRR}/gen_aligned_reads/stderr"
-    container: 
-        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
     shell:
         """
         WORKDIR=$(pwd); \
@@ -148,7 +139,7 @@ rule gen_aligned_reads:
         
         cd "$RULEDIR"; \
 
-        /usr/gitc/bwa mem \
+        bwa mem \
         -K 100000000 \
         -v 3 \
         -t 2 \
@@ -165,7 +156,6 @@ rule fetch_reads:
     log: 
         stderr = "{main_dir}/{SRR}/fetch_reads/{SRR}_fetch_reads_stderr",
         stdout = "{main_dir}/{SRR}/fetch_reads/{SRR}_fetch_reads_stdout"
-    container: "/vol/patric3/production/containers/ubuntu-045-12.sif" #TODO: consider changing to public image
     shell:
         """
         RULEDIR="$(dirname -- "$(realpath -- "{output.fq_1}")")"; \

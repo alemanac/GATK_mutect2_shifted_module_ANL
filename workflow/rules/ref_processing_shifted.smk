@@ -14,8 +14,6 @@ use rule gen_ref_bwa_indexes as gen_ref_bwa_indexes_shifted with:
     log:
         stderr = f"{main_dir}/{ref_base}/ref_processing_shifted/logs/{ref_base}_gen_ref_bwa_indexes_shifted_stderr",
         stdout = f"{main_dir}/{ref_base}/ref_processing_shifted/logs/{ref_base}_gen_ref_bwa_indexes_shifted_stdout"
-    container:
-        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
 
 rule shift_fasta:
     input:
@@ -35,8 +33,6 @@ rule shift_fasta:
     log: 
         stderr = f"{main_dir}/{ref_base}/ref_processing_shifted/logs/{ref_base}_shift_fasta_stderr",
         stdout = f"{main_dir}/{ref_base}/ref_processing_shifted/logs/{ref_base}_shift_fasta_stdout"
-    container:
-        "docker://broadinstitute/gatk"
     shell:
         """
         RULEDIR="$(dirname -- "$(realpath -- "{output.shifted_ref_fna}")")"; \
@@ -44,7 +40,9 @@ rule shift_fasta:
         cp {input.ref_index} "$RULEDIR"; \
         cp {input.ref_dict} "$RULEDIR"; \
 
-        gatk ShiftFasta \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
+        ShiftFasta \
         -R {input.ref} \
         -O {output.shifted_ref_fna} \
         --interval-file-name "$RULEDIR"/{ref_base} \

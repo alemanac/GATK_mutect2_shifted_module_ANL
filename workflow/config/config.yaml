@@ -1,6 +1,14 @@
 #Arguments passed to java when GATK is ran.
 java_args: "-Xms4000m -Xmx8000m"
 
+#GATK .jar file to be used when running GATK.
+#
+#It might be worth mapping the .jar to the path
+# of the Ubuntu container.
+#
+#ALSO: the filepath below must be changed unless you somehow have access to my home dir!
+gatk_jar: "/home/ac.aleman/gatk-4.6.0.0/gatk-4.6.0.0/gatk-package-4.6.0.0-local.jar"
+
 #Reference fasta file used for variant calling. 
 # Specify the relative *or* absolute filepath.
 ref_fna: "resources/BW25113.fna"
@@ -16,8 +24,8 @@ read_group_sequencing_center: "NA"
 samples:
 - "SRR3722077"
 - "SRR3722078"
-- "SRR3722089"
-- "SRR3722114"
+#- "SRR3722089"
+#- "SRR3722114"
 
 #Output directory. This directory can be absolute or relative 
 # to the root of the Snakemake workflow directory.

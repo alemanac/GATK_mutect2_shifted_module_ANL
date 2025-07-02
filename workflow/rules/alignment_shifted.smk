@@ -9,7 +9,6 @@ use rule gen_sorted_reads as gen_sorted_reads_shifted with:
     log: 
         stderr = "{main_dir}/{SRR}/gen_sorted_reads_shifted/stderr",
         stdout = "{main_dir}/{SRR}/gen_sorted_reads_shifted/stdout"
-    container: "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
 
 use rule gen_duplicates_marked_reads as gen_duplicates_marked_reads_shifted with:
     input:
@@ -20,8 +19,6 @@ use rule gen_duplicates_marked_reads as gen_duplicates_marked_reads_shifted with
     log: 
         stderr = "{main_dir}/{SRR}/gen_duplicates_marked_reads_shifted/stderr",
         stdout = "{main_dir}/{SRR}/gen_duplicates_marked_reads_shifted/stdout"
-    container:
-        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
 
 use rule gen_merged_aligned_reads as gen_merged_aligned_reads_shifted with: 
     input:
@@ -36,8 +33,6 @@ use rule gen_merged_aligned_reads as gen_merged_aligned_reads_shifted with:
     log: 
         stdout = "{main_dir}/{SRR}/gen_merged_aligned_reads_shifted/stdout",
         stderr = "{main_dir}/{SRR}/gen_merged_aligned_reads_shifted/stderr"
-    container:
-        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"
 
 use rule gen_aligned_reads as gen_aligned_reads_shifted with:
     input:
@@ -56,5 +51,3 @@ use rule gen_aligned_reads as gen_aligned_reads_shifted with:
     log: 
         stderr = "{main_dir}/{SRR}/gen_aligned_reads_shifted/stderr",
         stdout = "{main_dir}/{SRR}/gen_aligned_reads_shifted/stdout"
-    container: 
-        "docker://us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.2-1552931386"

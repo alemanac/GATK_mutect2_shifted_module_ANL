@@ -6,8 +6,6 @@ rule remove_duplicate_rows:
     log:
         stderr = "{main_dir}/{SRR}/remove_duplicate_rows/stderr",
         stdout = "{main_dir}/{SRR}/remove_duplicate_rows/stdout"
-    container:
-        "docker://broadinstitute/gatk"
     shell:
         """
         bcftools norm -d none {input.variants} -o {output.variants}
@@ -29,11 +27,10 @@ rule gen_filtered_vcfs:
     log: 
         stderr = "{main_dir}/{SRR}/gen_filtered_vcfs/stderr",
         stdout = "{main_dir}/{SRR}/gen_filtered_vcfs/stdout"
-    container:
-        "docker://broadinstitute/gatk"
     shell:
         """
-        gatk --java-options "{config[java_args]}" \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         FilterMutectCalls \
         -V {input.variants} \
         -R {input.ref} \
@@ -52,13 +49,11 @@ use rule gen_filtered_vcfs as gen_filtered_vcfs_shifted with:
     output:
         variants_filtered = "{main_dir}/{SRR}/gen_filtered_vcfs_shifted/variants.vcf"
     params:
-        allele_fraction_thres = "0.0",
+        allele_fraction_thres = config['allele_fraction'],
         microbial_mode = "--microbial-mode "
     log:
         stderr = "{main_dir}/{SRR}/gen_filtered_vcfs_shifted/stderr",
         stdout = "{main_dir}/{SRR}/gen_filtered_vcfs_shifted/stdout"
-    container:
-        "docker://broadinstitute/gatk"
 
 rule merge_stats:
     input:
@@ -69,11 +64,10 @@ rule merge_stats:
     log:
         stderr = "{main_dir}/{SRR}/merge_stats/stderr",
         stdout = "{main_dir}/{SRR}/merge_stats/stdout"
-    container:
-        "docker://broadinstitute/gatk"
     shell:
         """
-        gatk --java-options "{config[java_args]}" \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         MergeMutectStats \
         --stats {input.unshifted_stats} \
         --stats {input.shifted_stats} \
@@ -97,11 +91,10 @@ rule lifted_over_and_combined_vcfs:
         stdout_lift_over = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/stdout",
         stderr_merge = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/stderr",
         stdout_merge = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/stdout"
-    container:
-        "docker://broadinstitute/gatk"
     shell:
         """
-        gatk --java-options "{config[java_args]}" \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         LiftoverVcf \
         -I {input.shifted_variants} \
         -O {output.shifted_back_variants} \
@@ -109,7 +102,8 @@ rule lifted_over_and_combined_vcfs:
         --CHAIN {input.shiftback_chain} \
         --REJECT {output.rejected_vcf} 2> {log.stderr_lift_over} > {log.stdout_lift_over}; \
 
-        gatk --java-options "{config[java_args]}" \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         MergeVcfs \
         -I {output.shifted_back_variants} \
         -I {input.variants} \
@@ -136,11 +130,10 @@ rule gen_mutect2_vcfs:
     log:
         stderr = "{main_dir}/{SRR}/gen_mutect2_vcfs/stderr",
         stdout = "{main_dir}/{SRR}/gen_mutect2_vcfs/stdout"
-    container:
-        "docker://broadinstitute/gatk"
     shell: 
         """
-        gatk --java-options "{config[java_args]}" \
+        java {config[java_args]} \
+        -jar {config[gatk_jar]} \
         Mutect2 \
         -R {input.ref} \
         -I {input.reads} \
@@ -174,5 +167,3 @@ use rule gen_mutect2_vcfs as gen_mutect2_vcfs_shifted with:
     log:
         stderr = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/stderr",
         stdout = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/stdout"
-    container:
-        "docker://broadinstitute/gatk"

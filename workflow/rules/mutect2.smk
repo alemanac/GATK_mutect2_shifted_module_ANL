@@ -1,11 +1,11 @@
 rule remove_duplicate_rows:
     input:
-        variants = "{main_dir}/{SRR}/gen_filtered_vcfs_shifted/variants.vcf"
+        variants = "{main_dir}/{sample}/gen_filtered_vcfs_shifted/variants.vcf"
     output:
-        variants = "{main_dir}/{SRR}/remove_duplicate_rows/variants.vcf"
+        variants = "{main_dir}/{sample}/remove_duplicate_rows/variants.vcf"
     log:
-        stderr = "{main_dir}/{SRR}/remove_duplicate_rows/stderr",
-        stdout = "{main_dir}/{SRR}/remove_duplicate_rows/stdout"
+        stderr = "{main_dir}/{sample}/remove_duplicate_rows/stderr",
+        stdout = "{main_dir}/{sample}/remove_duplicate_rows/stdout"
     shell:
         """
         bcftools norm -d none {input.variants} -o {output.variants}
@@ -16,17 +16,17 @@ filters output .vcf file from GATK variation call
 """
 rule gen_filtered_vcfs:
     input:
-        variants = "{main_dir}/{SRR}/gen_mutect2_vcfs/variants.vcf",
-        stats = "{main_dir}/{SRR}/gen_mutect2_vcfs/variants.vcf.stats",
+        variants = "{main_dir}/{sample}/gen_mutect2_vcfs/variants.vcf",
+        stats = "{main_dir}/{sample}/gen_mutect2_vcfs/variants.vcf.stats",
         ref = f"{main_dir}/{ref_base}/ref_processing/{reference_fasta}"
     output:
-        variants_filtered = "{main_dir}/{SRR}/gen_filtered_vcfs/variants_filtered.vcf"
+        variants_filtered = "{main_dir}/{sample}/gen_filtered_vcfs/variants_filtered.vcf"
     params:
         allele_fraction_thres = config['allele_fraction'],
         microbial_mode = "--microbial-mode "
     log: 
-        stderr = "{main_dir}/{SRR}/gen_filtered_vcfs/stderr",
-        stdout = "{main_dir}/{SRR}/gen_filtered_vcfs/stdout"
+        stderr = "{main_dir}/{sample}/gen_filtered_vcfs/stderr",
+        stdout = "{main_dir}/{sample}/gen_filtered_vcfs/stdout"
     shell:
         """
         java {config[java_args]} \
@@ -43,27 +43,27 @@ rule gen_filtered_vcfs:
 
 use rule gen_filtered_vcfs as gen_filtered_vcfs_shifted with:
     input:
-        variants = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/variants.final.vcf",
-        stats = "{main_dir}/{SRR}/merge_stats/merged.stats",
+        variants = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/variants.final.vcf",
+        stats = "{main_dir}/{sample}/merge_stats/merged.stats",
         ref = f"{main_dir}/{ref_base}/ref_processing/{reference_fasta}"
     output:
-        variants_filtered = "{main_dir}/{SRR}/gen_filtered_vcfs_shifted/variants.vcf"
+        variants_filtered = "{main_dir}/{sample}/gen_filtered_vcfs_shifted/variants.vcf"
     params:
         allele_fraction_thres = config['allele_fraction'],
         microbial_mode = "--microbial-mode "
     log:
-        stderr = "{main_dir}/{SRR}/gen_filtered_vcfs_shifted/stderr",
-        stdout = "{main_dir}/{SRR}/gen_filtered_vcfs_shifted/stdout"
+        stderr = "{main_dir}/{sample}/gen_filtered_vcfs_shifted/stderr",
+        stdout = "{main_dir}/{sample}/gen_filtered_vcfs_shifted/stdout"
 
 rule merge_stats:
     input:
-        unshifted_stats = "{main_dir}/{SRR}/gen_mutect2_vcfs/variants.vcf.stats",
-        shifted_stats = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/variants.vcf.stats"
+        unshifted_stats = "{main_dir}/{sample}/gen_mutect2_vcfs/variants.vcf.stats",
+        shifted_stats = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/variants.vcf.stats"
     output:
-        merged_stats = "{main_dir}/{SRR}/merge_stats/merged.stats"
+        merged_stats = "{main_dir}/{sample}/merge_stats/merged.stats"
     log:
-        stderr = "{main_dir}/{SRR}/merge_stats/stderr",
-        stdout = "{main_dir}/{SRR}/merge_stats/stdout"
+        stderr = "{main_dir}/{sample}/merge_stats/stderr",
+        stdout = "{main_dir}/{sample}/merge_stats/stdout"
     shell:
         """
         java {config[java_args]} \
@@ -76,21 +76,21 @@ rule merge_stats:
 
 rule lifted_over_and_combined_vcfs:
     input:
-        variants = "{main_dir}/{SRR}/gen_mutect2_vcfs/variants.vcf",
-        shifted_variants = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/variants.vcf",
+        variants = "{main_dir}/{sample}/gen_mutect2_vcfs/variants.vcf",
+        shifted_variants = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/variants.vcf",
         shiftback_chain = f"{main_dir}/{ref_base}/ref_processing_shifted/{ref_base}.shiftback.chain",
         ref_dict = f"{main_dir}/{ref_base}/ref_processing/{ref_base}.dict",
         ref_fa = f"{main_dir}/{ref_base}/ref_processing/{reference_fasta}"
     output:
-        shifted_back_variants = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/variants.shifted_back.vcf",
-        rejected_vcf = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/variants.rejected.vcf",
-        final_variants = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/variants.final.vcf",
-        final_variants_index = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/variants.final.vcf.idx"
+        shifted_back_variants = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/variants.shifted_back.vcf",
+        rejected_vcf = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/variants.rejected.vcf",
+        final_variants = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/variants.final.vcf",
+        final_variants_index = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/variants.final.vcf.idx"
     log:
-        stderr_lift_over = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/stderr",
-        stdout_lift_over = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/stdout",
-        stderr_merge = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/stderr",
-        stdout_merge = "{main_dir}/{SRR}/lifted_over_and_combined_vcfs/stdout"
+        stderr_lift_over = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/stderr",
+        stdout_lift_over = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/stdout",
+        stderr_merge = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/stderr",
+        stdout_merge = "{main_dir}/{sample}/lifted_over_and_combined_vcfs/stdout"
     shell:
         """
         java {config[java_args]} \
@@ -116,20 +116,20 @@ performs a variation call via GATK
 """
 rule gen_mutect2_vcfs: 
     input:
-        reads = "{main_dir}/{SRR}/gen_sorted_reads/reads.bam",
+        reads = "{main_dir}/{sample}/gen_sorted_reads/reads.bam",
         ref = f"{main_dir}/{ref_base}/ref_processing/{reference_fasta}",
         fai = f"{main_dir}/{ref_base}/ref_processing/{ref_base}{ref_ext}.fai", #although not explictly use in the shell, the command relies on it
         intervals = f"{main_dir}/{ref_base}/ref_processing_shifted/{ref_base}.intervals"
     output:
-        variants = "{main_dir}/{SRR}/gen_mutect2_vcfs/variants.vcf",
-        stats = "{main_dir}/{SRR}/gen_mutect2_vcfs/variants.vcf.stats",
-        local_assemblies = "{main_dir}/{SRR}/gen_mutect2_vcfs/local_assemblies.bam",
-        assembly_regions = "{main_dir}/{SRR}/gen_mutect2_vcfs/assembly_regions.tsv",
-        graphs = "{main_dir}/{SRR}/gen_mutect2_vcfs/graph"
+        variants = "{main_dir}/{sample}/gen_mutect2_vcfs/variants.vcf",
+        stats = "{main_dir}/{sample}/gen_mutect2_vcfs/variants.vcf.stats",
+        local_assemblies = "{main_dir}/{sample}/gen_mutect2_vcfs/local_assemblies.bam",
+        assembly_regions = "{main_dir}/{sample}/gen_mutect2_vcfs/assembly_regions.tsv",
+        graphs = "{main_dir}/{sample}/gen_mutect2_vcfs/graph"
     threads: 8
     log:
-        stderr = "{main_dir}/{SRR}/gen_mutect2_vcfs/stderr",
-        stdout = "{main_dir}/{SRR}/gen_mutect2_vcfs/stdout"
+        stderr = "{main_dir}/{sample}/gen_mutect2_vcfs/stderr",
+        stdout = "{main_dir}/{sample}/gen_mutect2_vcfs/stdout"
     shell: 
         """
         java {config[java_args]} \
@@ -153,17 +153,17 @@ performs a variation call with GATK using basically all the shifted files
 """
 use rule gen_mutect2_vcfs as gen_mutect2_vcfs_shifted with:
     input:
-        reads = "{main_dir}/{SRR}/gen_sorted_reads_shifted/reads.bam",
+        reads = "{main_dir}/{sample}/gen_sorted_reads_shifted/reads.bam",
         ref = f"{main_dir}/{ref_base}/ref_processing_shifted/{ref_base}.shifted{ref_ext}",
         fai = f"{main_dir}/{ref_base}/ref_processing_shifted/{ref_base}.shifted{ref_ext}.fai",
         intervals = f"{main_dir}/{ref_base}/ref_processing_shifted/{ref_base}.shifted.intervals"
     output:
-        variants = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/variants.vcf",
-        stats = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/variants.vcf.stats",
-        local_assemblies = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/local_assemblies.shifted.bam",
-        assembly_regions = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/assembly_regions",
-        graphs = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/graphs"
+        variants = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/variants.vcf",
+        stats = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/variants.vcf.stats",
+        local_assemblies = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/local_assemblies.shifted.bam",
+        assembly_regions = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/assembly_regions",
+        graphs = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/graphs"
     threads: 8
     log:
-        stderr = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/stderr",
-        stdout = "{main_dir}/{SRR}/gen_mutect2_vcfs_shifted/stdout"
+        stderr = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/stderr",
+        stdout = "{main_dir}/{sample}/gen_mutect2_vcfs_shifted/stdout"

@@ -344,6 +344,18 @@ read_group_run_date: "NA"
 read_group_sequencing_center: "NA"
 ```
 
+* See the block below, but this is your own user-inputed fastq files. The `forward_strands` list contains the fastq files for one strand while the `reverse_strands` contains the fastq files for the corresponding paired strands. The forward strands list does not necessarily have to contain the forward strands and vice versa. Note: the indexes of the corresponding strands must match. For example, the absolute filepath for the paired read of SRR3722202_1 (meaning, SRR3722202_2) must be at index 1 in the `reverse_strands` list. 
+
+```yaml
+forward_strands:
+- "/home/ac.aleman/git/GATK_mutect2_shifted_module_ANL/resources/test_user_fastq/SRR3722205_1.fastq"
+- "/home/ac.aleman/git/GATK_mutect2_shifted_module_ANL/resources/test_user_fastq/SRR3722202_1.fastq"
+
+reverse_strands:
+- "/home/ac.aleman/git/GATK_mutect2_shifted_module_ANL/resources/test_user_fastq/SRR3722205_2.fastq"
+- "/home/ac.aleman/git/GATK_mutect2_shifted_module_ANL/resources/test_user_fastq/SRR3722202_2.fastq"
+```
+
 #### Advance Snakemake Execution
 
 ##### Specifying config filepath
@@ -364,7 +376,11 @@ You may find it inconvenient to change the config parameters manually or via a s
 
 `snakemake --config allele_frac="1.5"`
 
-I honestly haven't used this feature that much, so that above example may not work, but I hope it gives the general idea. The official example of this feature on the Snakemake docs can be found [here](https://snakemake.readthedocs.io/en/stable/snakefiles/configuration.html).
+ Below is an example to modify the values in `forward_strands` and `reverse_strands`:
+
+ `snakemake --config forward_strands='["/new/path/to/file1.fastq"]' reverse_strands='["/path2/w"]'`
+ 
+ The official example of this feature on the Snakemake docs can be found [here](https://snakemake.readthedocs.io/en/stable/snakefiles/configuration.html).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
